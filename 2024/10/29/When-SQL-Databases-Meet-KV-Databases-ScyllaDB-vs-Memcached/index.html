@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en" color-mode="light">
+
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="author" content="SuSun" />
+  <!-- Open Graph Description 简短摘要-->
+  
+  <!-- 用于搜索引擎的文章摘要 -->
+  
+  
+  
+  <title>
+    
+      When SQL Databases Meet KV Databases (ScyllaDB vs Memcached) 
+      
+      
+      |
+    
+     SuSun&#39;s Blog Website
+  </title>
+
+  
+    <link rel="apple-touch-icon" href="/images/favicon.png">
+    <link rel="icon" href="/images/favicon.png">
+  
+
+  <!-- Raleway-Font -->
+  <link href="https://fonts.googleapis.com/css?family=Raleway&display=swap" rel="stylesheet">
+
+  <!-- hexo site css -->
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="//at.alicdn.com/t/font_1886449_67xjft27j1l.css" />
+  <!-- 代码块风格 -->
+  
+
+  <!-- jquery3.3.1 -->
+  
+    <script defer type="text/javascript" src="/plugins/jquery.min.js"></script>
+  
+
+  <!-- fancybox -->
+  
+    <link href="/plugins/jquery.fancybox.min.css" rel="stylesheet">
+    <script defer type="text/javascript" src="/plugins/jquery.fancybox.min.js"></script>
+  
+  
+<script src="/js/fancybox.js"></script>
+
+
+  
+
+  
+
+  <script>
+    var html = document.documentElement
+    const colorMode = localStorage.getItem('color-mode')
+    if (colorMode) {
+      document.documentElement.setAttribute('color-mode', colorMode)
+    }
+  </script>
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+  <body>
+    <div id="app">
+      <div class="header">
+  <div class="avatar">
+    <a href="/">
+      <!-- 头像取消懒加载，添加no-lazy -->
+      
+        <img src="/images/avatar.png" alt="">
+      
+    </a>
+    <div class="nickname"><a href="/">Oranges</a></div>
+  </div>
+  <div class="navbar">
+    <ul>
+      
+        <li class="nav-item" data-path="/">
+          <a href="/">Home</a>
+        </li>
+      
+        <li class="nav-item" data-path="/archives/">
+          <a href="/archives/">Archives</a>
+        </li>
+      
+        <li class="nav-item" data-path="/tags/">
+          <a href="/tags/">Tags</a>
+        </li>
+      
+        <li class="nav-item" data-path="/friends/">
+          <a href="/friends/">Friends</a>
+        </li>
+      
+        <li class="nav-item" data-path="/about/">
+          <a href="/about/">About</a>
+        </li>
+      
+    </ul>
+  </div>
+</div>
+
+
+<script src="/js/activeNav.js"></script>
+
+
+
+      <div class="flex-container">
+        <!-- 文章详情页，展示文章具体内容，url形式：https://yoursite/文章标题/ -->
+<!-- 同时为「标签tag」，「朋友friend」，「分类categories」，「关于about」页面的承载页面，具体展示取决于page.type -->
+
+
+  <!-- LaTex Display -->
+
+  
+    <script async type="text/javascript" src="/plugins/mathjax/tex-chtml.js"></script>
+  
+  <script>
+    MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      }
+    }
+  </script>
+
+
+
+
+
+  <!-- clipboard -->
+
+  
+    <script async type="text/javascript" src="/plugins/clipboard.min.js"></script>
+  
+  
+<script src="/js/codeCopy.js"></script>
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  <!-- 文章内容页 url形式：https://yoursite/文章标题/ -->
+  <div class="container post-details" id="post-details">
+    <div class="post-content">
+      <div class="post-title">When SQL Databases Meet KV Databases (ScyllaDB vs Memcached)</div>
+      <div class="post-attach">
+        <span class="post-pubtime">
+          <i class="iconfont icon-updatetime mr-10" title="Update time"></i>
+          2024-10-29 03:39:35
+        </span>
+        
+      </div>
+      <div class="markdown-body">
+        <h1 id="当sql数据库遇见kv数据库-scylladb-vs-memcached"><a href="#当sql数据库遇见kv数据库-scylladb-vs-memcached" class="headerlink" title="当sql数据库遇见kv数据库(scylladb vs memcached)"></a>当sql数据库遇见kv数据库(scylladb vs memcached)</h1><p>​<img src="/assets/1200x628-scylladb-vs-memached-1100x576-20241022212408-7ag8k9p.png">​</p>
+<ul>
+<li>We Compared ScyllaDB and Memcached and… We Lost? - ScyllaDB - ScyllaDB</li>
+<li><a target="_blank" rel="noopener" href="https://www.scylladb.com/2024/10/08/scylladb-and-memcached/">https://www.scylladb.com/2024/10/08/scylladb-and-memcached/</a></li>
+<li>Engineers behind ScyllaDB joined forces with Memcached maintainer dormando for an in-depth look at database and cache internals, and the tradeoffs in each.</li>
+</ul>
+<p><a target="_blank" rel="noopener" href="https://www.scylladb.com/2024/10/08/scylladb-and-memcached/">We Compared ScyllaDB and Memcached and… We Lost?</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/fee-mendes/mc-scylladb">fee-mendes&#x2F;mc-scylladb: Memcached and ScyllaDB</a></p>
+<p>不是翻译，一半原文，一半我自己的碎碎念，感觉我自己的比例还要高点？</p>
+<h3 id="背景介绍"><a href="#背景介绍" class="headerlink" title="背景介绍"></a>背景介绍</h3><p><strong>原文来自scylladb，scylladb经常出一些不错的文章，有需要的可以关注一下.</strong></p>
+<p>我曾经思考过一个问题：理论上，将SQL数据库的表结构简化为两列（key, value），是否就能将其当作KV（键值）数据库来使用？这两者之间究竟存在多大的差距？在实际应用中，它们的使用体验又有何不同？</p>
+<blockquote>
+<p>Engineers behind ScyllaDB – the database for predictable performance at scale – joined forces with Memcached maintainer dormando to compare both technologies head-to-head, in a collaborative vendor-neutral way.</p>
+</blockquote>
+<p>predictable用的很好。<strong>在工业界，稳定性是至关重要的</strong>。这也是许多学术方法虽然指标亮眼，却难以在实际应用中立足的原因。随着效果的提升，系统的复杂性往往也会增加，从而导致鲁棒性（稳定性）下降。</p>
+<p>但是 scale law能否用在这个问题上呢？我觉得是另外一个问题，计算是为了获得洞察的，洞察可以来指导决策。</p>
+<blockquote>
+<p>The purpose of computing is insight, not numbers.</p>
+</blockquote>
+<p>单纯的计算或者单纯的存储都是没有意义的。</p>
+<h4 id="简单摘要"><a href="#简单摘要" class="headerlink" title="简单摘要"></a>简单摘要</h4><p>两者都打满了disk 和 network带宽，并且具有较为相似的性能。或者说两者没有明显的胜负之分。</p>
+<p>为了打满，双方都需要做一些改动</p>
+<ol>
+<li>scylladb 需要更改 data modeling</li>
+<li>memcached 需要更多的 i&#x2F;o 线程（问题： 过多的i&#x2F;o 线程，是否会有过多的上下文切换，性能损失是多少？）</li>
+<li>scylladb 在 pipeliend requests to disk下展示了更好的延迟，memcached 在单个请求下 延迟更好。</li>
+</ol>
+<p>介绍选手，scylladb，这公司有不少kernel hacker，技术确实一流。</p>
+<ol>
+<li><a target="_blank" rel="noopener" href="https://www.scylladb.com/product/technology/shard-per-core-architecture/">shard-per-core</a> core level的<a href="siyuan://blocks/20230723131015-l5rqpmr">shared-nothing</a>，我喜欢叫<a href="siyuan://blocks/20241027192211-2gt8xbn">单机shared-nothing</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.scylladb.com/2021/09/15/what-weve-learned-after-6-years-of-io-scheduling/">userspace I&#x2F;O scheduler</a> ，用户态i&#x2F;o调度</li>
+<li><a target="_blank" rel="noopener" href="https://www.scylladb.com/2024/01/08/inside-scylladbs-internal-cache/">internal cache implementation</a> ， fully bypassing the linux page cache（这篇也不错的）</li>
+</ol>
+<h4 id="动机：内存缓存市场的膨胀与成本优化"><a href="#动机：内存缓存市场的膨胀与成本优化" class="headerlink" title="动机：内存缓存市场的膨胀与成本优化"></a>动机：内存缓存市场的膨胀与成本优化</h4><p>随着内存缓存市场膨胀，尤其是Redis的广泛应用，Redis的一些核心功能已经趋于稳定，能不会再有像Redis-v2那样带来巨幅性能提升的版本更新。在这种情况下，如何在保持性能的前提下降低成本，毕竟利润 &#x3D; 赚到的钱 - 成本，在性能损失可接受的波动下，只要在性能损失可控的范围内，成本的大幅下降就能为企业带来显著的利润增长。</p>
+<blockquote>
+<p>在云环境中，RAM 也比 1 GB 的闪存存储贵得多。Danny Kopping 在演讲中估计，GCP n2 标准机器的 RAM 成本约为 4.43 美元&#x2F;GB，而闪存的价格则降至 0.08 美元&#x2F;GB。</p>
+</blockquote>
+<p>因此，无论是在学术界还是工业界，多级缓存的趋势愈发明显。当然，这并不意味着纯内存缓存场景的消失，而是说在某些特定场景下，多级缓存策略能够更好地平衡性能与成本。</p>
+<p>我觉得另一条线是，云存储接管了可用性问题，对象存储确实在这个时代中占据了不小的市场。对象存储貌似成了离线平台的首选（olap类的东西），但它又比较慢，花一些钱，做一点cache，让整体吞吐好看一点。</p>
+<p>这里的多级实际上很复杂，不只是mem&#x2F;ssd，在云存储服务逐渐发展起来之后，和一些奇怪的硬件出现后，存储体系空前之多。</p>
+<ol>
+<li>对象存储，s3还有贵的s3(叫express? starocks测过)，还有归档冷存。</li>
+<li>块存储</li>
+<li>文件存储</li>
+</ol>
+<p>ssd 也有很多种，hdd 也有它的适合的场景，包括可能自己封一个存算分离，内存池什么的。</p>
+<p>它们虽然接口上有不同的差异，但核心的trade off始终是在用户场景下的 cost &#x2F; performance。</p>
+<h5 id="Redis-7-2-的新特性：Auto-Tiering"><a href="#Redis-7-2-的新特性：Auto-Tiering" class="headerlink" title="Redis 7.2 的新特性：Auto Tiering"></a>Redis 7.2 的新特性：Auto Tiering</h5><p>redis 在 23年8月的 7.2支持了这个，<a target="_blank" rel="noopener" href="https://redis.io/blog/introducing-redis-7-2/">https://redis.io/blog/introducing-redis-7-2/</a> ，叫做auto tiering。</p>
+<h5 id="Dragonfly-对标redis和memcached"><a href="#Dragonfly-对标redis和memcached" class="headerlink" title="Dragonfly : 对标redis和memcached"></a>Dragonfly : 对标redis和memcached</h5><p>提到redis，就逃不开dragonfly，今天认真读了一下dragonfly的readme，发现这玩意儿可能也挺有意思的，以下都todo一下</p>
+<ol>
+<li>它说它用了一种自适应缓存算法（tinylfu?)，没看</li>
+<li>和scylladb一样，单机shared-nothing，背后的io框架叫做helio</li>
+<li><a target="_blank" rel="noopener" href="https://www.cs.umd.edu/~abadi/papers/vldbj-vll.pdf">cs.umd.edu&#x2F;~abadi&#x2F;papers&#x2F;vldbj-vll.pdf</a> VLL: alock manager redesign for main memory database systems，参考这篇做的main memory tp。可能不读，不是很懂tp。</li>
+<li><a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2003.07302.pdf">Dash: Scalable Hashing on Persistent Memory</a> ，虽然是pm，但思想是适用的。看起来这篇论文贡献比较多，重点todo。</li>
+</ol>
+<p>dragonfly 在今年九月份发了一个博客介绍它们的ssd tiering （<a target="_blank" rel="noopener" href="https://www.dragonflydb.io/blog/a-preview-of-dragonfly-ssd-tiering">Dragonfly SSD Data Tiering: Caching All the Way Down</a>）</p>
+<p>但无论redis 或者 dragonfly，ssd ft还属于一个偏实验，或者说小众的情况。</p>
+<p>这篇文章也许能回答这个问题，当你有200gb内存，4tb ssd做缓存时，应该选择mem kv 带 ssd ft (redis,dragonfly,memcahed) ，还是选择一些本来就是mem + ssd的引擎(rocksdb, scylladb,wiredtiger)。谁的性能会更胜一筹？</p>
+<p>速问速答：ssd cache最大的问题是什么？</p>
+<ol>
+<li>小对象极高的写放大</li>
+<li>不加控制的话，极高的写入速率，必须要做admission policy, 宁可错杀。</li>
+</ol>
+<p>不关注这两个问题的话，ssd寿命很低(rocksdb  paper有数据），包括cloudflare也介绍过这个问题（<a target="_blank" rel="noopener" href="https://blog.cloudflare.com/why-we-started-putting-unpopular-assets-in-memory/">Why We Started Putting Unpopular Assets in Memory</a> )，各家的cdn cache也基本都是mem + ssd cahe，核心问题都是量太大了 youtube ml cache 那篇，网飞 <a target="_blank" rel="noopener" href="https://www.infoq.com/articles/netflix-global-cache/">Building a Global Caching System at Netflix: a Deep Dive to Global Replication</a> (基于memcached), fast24 facebook的baleen （学术项目）。</p>
+<p>核心是在trade off 各自 workload 下 cost &#x2F; performance 的甜点。redis 等kv认为内存该放热的，cloudflare 则认为内存该放冷的，两者都是正确的，redis的客户需要内存性能，整体内存比例偏高，performance优先，cloudflare的cdn cache不太追求内存性能，ssd比例偏高，cost优先。</p>
+<p>总结就是：传统内存缓存开始做一些闪存的feat，那么反过来，本来是给闪存做的持久性kv，用作缓存，效果怎么样呢？这就是这篇文章的动机。</p>
+<p>scylladb 还有一个talk （<a target="_blank" rel="noopener" href="https://www.scylladb.com/2017/07/31/database-caches-not-good/">7 Reasons Not to Put a Cache in Front of Your Database</a>0），一个论点就是，数据库自己就有缓存，没有自己加一个。</p>
+<p>另外scylladb还说，最近有一些客户成功用scylladb替换了它们的缓存（不过不公开，我看不到）。</p>
+<p>在去年的P99  CONF上，memcached作者做了一个演讲(<a target="_blank" rel="noopener" href="https://www.p99conf.io/session/cache-me-if-you-can-how-grafana-labs-scaled-up-their-memcached-42x-cut-costs-too/">Cache Me If You Can</a>)，大概是介绍memcached <strong>extstore</strong> ( <a target="_blank" rel="noopener" href="https://docs.memcached.org/features/flashstorage/">Flash Storage – Memcached Documentation</a>)怎么让Grafna labs 降低成本的同时，扩大了缓存的规模。(感觉也很有意思，todo)</p>
+<h3 id="赛前准备"><a href="#赛前准备" class="headerlink" title="赛前准备"></a>赛前准备</h3><p>在aws上跑的</p>
+<ul>
+<li>loader: c7i.16xlarge (64 vCPUs, 128GB RAM)</li>
+<li>memcached: i4i.4xlarge (16 vCPUs, 128GB RAM, 3.75TB NVMe)</li>
+<li>scylladb: i4i.4xlarge (16 vCPUs, 128GB RAM, 3.75TB NVMe)</li>
+</ul>
+<p>一个core就是8gb的内存，mem:ssd 比例 1:30 左右，这个比例其实偏大，属于以SSD为主的缓存。</p>
+<p>所有实例都有25Gbps 的网络带宽。</p>
+<ul>
+<li>memcached: 1.6.25 ，开启extstore，14个线程，绑核（下次老板让你性能测试的时候，秀一手），剩下两个cpu分配给cpu 0 处理网络IRQ（这个换我估计考虑不到），禁用CAS操作节省空间占用。</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">taskset -c 1-7,9-15 /usr/local/memcached/bin/memcached -v -A -r -m 114100 -c 4096 –lock-memory –threads 14 -u scylla -C</span><br></pre></td></tr></table></figure>
+
+<p>scylladb 同理。</p>
+<h4 id="压测程序"><a href="#压测程序" class="headerlink" title="压测程序"></a>压测程序</h4><p>用了memcached自己的<a target="_blank" rel="noopener" href="https://github.com/memcached/mcshredder">mcshredder</a> （基于io_uring哦，这个todo可以归到io_uring那边去）,profiles 用的（<a target="_blank" rel="noopener" href="https://github.com/fee-mendes/shredders/tree/main">fee-mendes&#x2F;shredders</a>）。</p>
+<h4 id="内存场景下的tests-and-results"><a href="#内存场景下的tests-and-results" class="headerlink" title="内存场景下的tests and results"></a>内存场景下的tests and results</h4><h5 id="缓存占用空间"><a href="#缓存占用空间" class="headerlink" title="缓存占用空间"></a>缓存占用空间</h5><p>memory 中可以容纳的kv数量越多，hit rate就可能更高</p>
+<p>这让我想起来, juicefs的元数据引擎(<a target="_blank" rel="noopener" href="https://juicefs.com/zh-cn/blog/engineering/go-build-billion-file-system">极限挑战：使用 Go 打造百亿级文件系统的实践之旅 - JuiceFS 博客</a>，全内存，无锁方案，里面有一句话是“<strong>并通过不断的优化来减小文件元数据的内存占用</strong>“，无锁好像也是指的单机shared nothing，这种天然无锁。</p>
+<p>juicefs的元数据引擎亮点</p>
+<ol>
+<li>它的元数据架构其实是类似tectonic方案的，也就是基于两种类型的k&#x2F;v对，扁平化设计，意味着大部分k&#x2F;v具有高度可预测的大小，都比较小，50-100字节，但抵不住数量多。如果它们的分配释放全部交给go的gc，gc 感觉压力太大了。所以还是自己接手一定的分配工作。</li>
+<li><strong>压缩空闲目录</strong> ： 存储系统具有较强的局部性(怎么证明这个？局部性）。这点对于元数据来说也是成立的。Juicefs 将 不活跃的目录元数据进行压缩。将一个目录和它的目录项紧凑序列化到一段连续的内存缓冲区，然后压缩。大概省了三分之二的内存。压缩的trade off是cpu时间，和有可能的延迟长尾。（这个优化确实很有意思）</li>
+<li>还有一个小文件元数据紧凑格式，更多指的是大小方面的元数据(chunk,slice)。类似union 特判一下，略过。</li>
+</ol>
+<p>​<img src="/assets/image-20241023214703-moakykj.png" alt="image">​</p>
+<p>效果还是非常可观的，值得学习。</p>
+<h5 id="memcahced"><a href="#memcahced" class="headerlink" title="memcahced"></a>memcahced</h5><p>memcached 存储了101M个key,value对，也就是一亿个。</p>
+<p>两者都是LRU。压测读30分钟。</p>
+<p>memcahced pipeline 16 items, 3M qps也就是3000k qps，网络带宽打满了。hit ratio 100%。这个时候cpu好像没满，空闲了一些（短板问题）。</p>
+<p>​<img src="/assets/image-20241023222441-bzagtld.png" alt="image">​</p>
+<p>延迟信息</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">--- subtest basic ---</span><br><span class="line"><span class="built_in">stat</span>: cmd_get :</span><br><span class="line"> Total Ops: 5503513496</span><br><span class="line"> Rate: 3060908/s</span><br><span class="line">=== timer mg ===</span><br><span class="line">1-10us    0    0.000%</span><br><span class="line">10-99us    343504394    6.238%</span><br><span class="line">100-999us    5163057634    93.762%</span><br><span class="line">1-2ms    11500    0.00021%</span><br><span class="line">2-3ms    144    0.00000%</span><br><span class="line">3-4ms    336    0.00001%</span><br><span class="line">4-5ms    400    0.00001%</span><br><span class="line">11-12ms    32    0.00000%</span><br></pre></td></tr></table></figure>
+
+<p>看起来还是挺不错的？memcached作者用更好的机器测过 55M qps的 <a target="_blank" rel="noopener" href="https://news.ycombinator.com/item?id=17179348">Hacker News</a>，理论上单机shared-nothing 是可以线性可扩展的，只要服务器硬件密度够高。</p>
+<h5 id="scylladb"><a href="#scylladb" class="headerlink" title="scylladb"></a>scylladb</h5><p>scylladb 只存储了60M 个key,value对，不难理解，因为它本质是一个oltp db，它的value还需要赛一些私货。</p>
+<p>scylladb 这里提到一些为了这个压测优化，和它的cache等强相关，我研究一下大致意思是，scylladb的cache是会存范围性的信息的，因为它本质是一个sql，要支持range query和range delete。但是缓存这种，没有扫描的，维护这个就有点多余。</p>
+<p>scylladb 没有所谓 pipeline的ft，所以是group 16 rows per partition，来对标memcached的16 item pipeline.</p>
+<p>之后优化后，总共弄了80M 的缓存item。</p>
+<p> a total of 187K read ops&#x2F;second over 30 minutes，但是每个操作都会得到16 rows，所以结果需要* 16, 也就是2,992k qps（really?真这么快？）。两者都是单机shared-nothing，拼的可能是内存索引快不快吧。</p>
+<p>服务端p99，500us 对于纯内存感觉还不是极限？不过它没有分析。</p>
+<p>​<img src="/assets/image-20241027195553-7xp0n8l.png" alt="image">​</p>
+<p>scylladb 也打满了网络带宽，客户端方面的p99，感觉“毛刺” 比较严重？应该是网络问题。</p>
+<p>​<img src="/assets/image-20241023223439-svaynb2.png" alt="image">​</p>
+<h4 id="基于ssd的测试"><a href="#基于ssd的测试" class="headerlink" title="基于ssd的测试"></a>基于ssd的测试</h4><p>首先表达了，这个测试比较难做，因为没有合适的，没有理想的工作负载。就像之前redis 和 cloudflare的不同决策，一个乐观，一个悲观，两者都真实存在，一个需要内存性能，一个需要ssd性能。</p>
+<p>所以测试团队决定，两种都测，也就是大部分hit mem还是大部分hit ssd。</p>
+<p>基于xfs，fio测试下，randread， 340k iops，还不错。</p>
+<h5 id="memcached-exstore"><a href="#memcached-exstore" class="headerlink" title="memcached exstore"></a>memcached exstore</h5><p><a target="_blank" rel="noopener" href="https://memcached.org/blog/nvm-caching/">memcached.org&#x2F;blog&#x2F;nvm-caching&#x2F;</a> memcached作者关于支持nvme的看法(2017年就写了，观点2018出）,作者认为还是主要针对大value。</p>
+<p>索引必须要能放到内存中，就是一个哈希表和keys，也还好。</p>
+<p>下刷到ssd的策略是，lru尾部刷新到ssd。单个文件被拆分为大页（64MB)，还有一个8MB的write buffer。有一个版本号。</p>
+<p>使用exstore，能存储12.5亿个items，扩大了11倍，磁盘只用了1.25 TB。exstore是传统的缓冲io，搭配io线程，数量多少，需要用户tune一下，少了利用率低，多了竞争有开销。(exstore也想做异步i&#x2F;o，但还没做，包括by pass kernel cache）。</p>
+<p>更改了一下绑核策略，不再给网络让一个核，因为瓶颈转到ssd上了。</p>
+<blockquote>
+<p>On top of these settings, we also ensured that our backing NVMe store had no defined IO scheduler (none in sysfs), and <a target="_blank" rel="noopener" href="https://www.kernel.org/doc/Documentation/block/queue-sysfs.txt"><em>nomerges</em></a> was set to 2.</p>
+</blockquote>
+<p>知识点太多了。。。</p>
+<p>io调度器性能（<a target="_blank" rel="noopener" href="https://www.phoronix.com/review/linux-56-nvme/2">Linux 5.6 I&#x2F;O Scheduler Benchmarks: None, Kyber, BFQ, MQ-Deadline - Phoronix</a>)</p>
+<p>​<img src="/assets/image-20241027202223-2eejzeq.png" alt="image">​</p>
+<p>（话说我电脑上的是哪个？）</p>
+<h6 id="1kv-小-value测试"><a href="#1kv-小-value测试" class="headerlink" title="1kv 小 value测试"></a>1kv 小 value测试</h6><p>存储了700M个item，用了大概52gb ram。</p>
+<p>32个i&#x2F;o线程打不满磁盘带宽（用iotop看的），850mb&#x2F;s , 调到64个，1200mb&#x2F;s.</p>
+<p>​<img src="/assets/image-20241023225029-t4y12sh.png" alt="image">​</p>
+<p>qps和latency不可兼得，至少在这个case下，我觉得我愿意64线程。</p>
+<h6 id="8kb-大value"><a href="#8kb-大value" class="headerlink" title="8kb 大value"></a>8kb 大value</h6><p>将value扩大到8kb value，再测一遍。这个case下，ssd的支持就是必要的，用内存成本确实顶不住。但这么大value的场景其实不太多。16个线程1025mb&#x2F;s , 32个线程 1100mb&#x2F;s，32有点没必要。</p>
+<p>​<img src="/assets/image-20241023225232-a0dcq6r.png" alt="image">​</p>
+<p>不开启pipeline的话，延迟会好非常多。开启之后，因为batching，i&#x2F;o队列要大一些，所以latency也就上来了。</p>
+<h5 id="scylladb-回到主场"><a href="#scylladb-回到主场" class="headerlink" title="scylladb 回到主场"></a>scylladb 回到主场</h5><p>scylladb 自己是一个针对存储高度优化的数据库，有自己的i&#x2F;o 调度器，有自己的“page cache”，i&#x2F;o也是异步的。有可能的话，出一篇i&#x2F;o调度器的调研。</p>
+<p>seastar首先会使用一个iotune来测试磁盘，记录带宽和iops，辅助i&#x2F;o调度器的决策。如下</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">disks:</span><br><span class="line">  - mountpoint: /var/lib/scylla</span><br><span class="line">	read_iops: 313289</span><br><span class="line">	read_bandwidth: 3116245504</span><br><span class="line">	write_iops: 91691</span><br><span class="line">	write_bandwidth: 2287052288</span><br></pre></td></tr></table></figure>
+
+<p>读路径是传统LSM读路径。</p>
+<p>又介绍了一些它自己的优化，有点晕，略过，不是很熟oltp和lsm。</p>
+<h6 id="1kb-小value"><a href="#1kb-小value" class="headerlink" title="1kb 小value"></a>1kb 小value</h6><p>填充料700M 个item，1kb 测试结果如下</p>
+<p>​<img src="/assets/image-20241023230025-6vrjc64.png" alt="image">​</p>
+<p>这里的shard指的是一个cpu core，也就是说一个core可以轻松来到19k qps，99 latency 在2ms左右。</p>
+<p>scylladb 的 ssd带宽更低，但也接近磁盘的最大随机读iops。</p>
+<p>​<img src="/assets/image-20241023230151-0oh089f.png" alt="image">​</p>
+<p>这里实际在说的是“读放大更小？“</p>
+<blockquote>
+<p>thanks to its AIO&#x2F;DIO implementation</p>
+</blockquote>
+<p>seastar其实是支持io_uring的，但我感觉支持的比较奇怪，之前我自己测的时候效果也一般。不知道具体原因。</p>
+<p>​<img src="/assets/image-20241023230151-0oh089f.png" alt="image">​</p>
+<p>客户端的268k qps和p99 2.4ms，都优于memcached exstore。</p>
+<p>​<img src="/assets/image-20241023230456-t7g9za2.png" alt="image">​</p>
+<h6 id="8kb-测试"><a href="#8kb-测试" class="headerlink" title="8kb 测试"></a>8kb 测试</h6><p>切成leveled compaction，关闭sstable compression。</p>
+<p>160k qps, p99 2ms，至少数据上看，也是全面优于memcached.</p>
+<p>​<img src="/assets/image-20241023230825-b5peu9k.png" alt="image">​</p>
+<p>有一篇paper其实研究过i&#x2F;o调度策略对性能影响的，kernel其实也支持几个io调度器，之后会归到io_uring那篇文章。</p>
+<p>这个client side的P99，看的身心愉悦。</p>
+<p>​<img src="/assets/image-20241023231020-0c8hilf.png" alt="image">​</p>
+<p>实际的磁盘带宽和iops和memcached差不多，starvation time在增加，表明ssd调度不过来了。i&#x2F;o调度真有这么神奇？有时间研究看看。带宽来到 1.3 gb&#x2F;s，比memcahced要高一些。</p>
+<p>​<img src="/assets/image-20241023231347-hl538q1.png" alt="image">​</p>
+<h4 id="ssd-overwrite测试"><a href="#ssd-overwrite测试" class="headerlink" title="ssd overwrite测试"></a>ssd overwrite测试</h4><p>在之前的测视力加入10%的随机overwrite。‘</p>
+<p>memcached</p>
+<p>​<img src="/assets/image-20241027203700-w9lnplt.png" alt="image">​</p>
+<p>scylladb，两个合起来看。读的延迟偏高。</p>
+<p>​<img src="/assets/image-20241027203739-bvlaazn.png" alt="image">​</p>
+<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>其实看下来两者性能并没有显著的差异。选择哪一个，取决于</p>
+<ol>
+<li><p>用户更喜欢kv还是sql。</p>
+</li>
+<li><p>value大小，exstore对小value不太友好，而scylladb是lsm，还可以接受。</p>
+</li>
+<li><p>scylladb 可以热重启，并提供更成熟的分布式解决方案</p>
+</li>
+</ol>
+<h3 id="想法"><a href="#想法" class="headerlink" title="想法"></a>想法</h3><p>怎么做在不同workload下 不同存储层级的 cost &#x2F; performance的trade off。</p>
+<p>比如离线平台存储问题，对象存储上可能有上PB的数据，用户负载具有一定的局部性，可能一天算下来有几百个tb？这几百个tb中，有些只访问一次（这里是要有一个时间间隔的），任何数据都会访问多次（除非是leak），无非是间隔多久，1day, 1 week, 1 month, 1year, 按照天看，每天都在访问的数据是多大，几十tb?那么就弄一个ssd集群，或者说express s3，存放这几十tb的数据。</p>
+<p>这里其实要收集trace 分析的，我觉得现在缓存做的很不好的一点是。</p>
+<p>假如你问一个缓存系统的运维，“缓存现在怎么样？”</p>
+<p>“hit rate有50多，看起来不错？”</p>
+<p>但其实假如有几十tb的缓存，单独一个hit rate，说明不了任何问题，至多说明它没有崩溃。缓存算法是否在工作？即使不淘汰，几十tb也能撑起很久很久的hit rate。淘汰的是什么，hot的是什么？缓存是否超配，MRC 分析？</p>
+<p>花费了x $，让每天跑的查询快了 y %。</p>
+<p>这个应该有一个曲线出来的，能揭示更多信息。</p>
+<p>让ai写一个结尾吧（来自o1 preview)，比我有文采</p>
+<blockquote>
+<p>在庞大的数据存储中，表面的指标常常掩盖了深层次的问题。高命中率可能只是资源过剩的假象，未必反映了缓存算法的有效性。真正的优化来自于对数据访问模式的深刻理解和对存储层级的精细权衡。或许，我们应该超越数字的迷雾，重新审视：我们的系统是否真正实现了成本与性能的最佳平衡，还是仅仅满足于看似不错的统计数据？</p>
+</blockquote>
+<p>‍</p>
+
+      </div>
+      
+        <div class="prev-or-next">
+          <div class="post-foot-next">
+            
+              <a href="/2024/10/28/Exploration-of-Lock-Overhead-Rust/" target="_self">
+                <i class="iconfont icon-chevronleft"></i>
+                <span>Prev</span>
+              </a>
+            
+          </div>
+          <div class="post-attach">
+            <span class="post-pubtime">
+              <i class="iconfont icon-updatetime mr-10" title="Update time"></i>
+              2024-10-29 03:39:35
+            </span>
+            
+          </div>
+          <div class="post-foot-prev">
+            
+          </div>
+        </div>
+      
+    </div>
+    
+  <div id="btn-catalog" class="btn-catalog">
+    <i class="iconfont icon-catalog"></i>
+  </div>
+  <div class="post-catalog hidden" id="catalog">
+    <div class="title">Contents</div>
+    <div class="catalog-content">
+      
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%BD%93sql%E6%95%B0%E6%8D%AE%E5%BA%93%E9%81%87%E8%A7%81kv%E6%95%B0%E6%8D%AE%E5%BA%93-scylladb-vs-memcached"><span class="toc-text">当sql数据库遇见kv数据库(scylladb vs memcached)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%83%8C%E6%99%AF%E4%BB%8B%E7%BB%8D"><span class="toc-text">背景介绍</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%AE%80%E5%8D%95%E6%91%98%E8%A6%81"><span class="toc-text">简单摘要</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8A%A8%E6%9C%BA%EF%BC%9A%E5%86%85%E5%AD%98%E7%BC%93%E5%AD%98%E5%B8%82%E5%9C%BA%E7%9A%84%E8%86%A8%E8%83%80%E4%B8%8E%E6%88%90%E6%9C%AC%E4%BC%98%E5%8C%96"><span class="toc-text">动机：内存缓存市场的膨胀与成本优化</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#Redis-7-2-%E7%9A%84%E6%96%B0%E7%89%B9%E6%80%A7%EF%BC%9AAuto-Tiering"><span class="toc-text">Redis 7.2 的新特性：Auto Tiering</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Dragonfly-%E5%AF%B9%E6%A0%87redis%E5%92%8Cmemcached"><span class="toc-text">Dragonfly : 对标redis和memcached</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B5%9B%E5%89%8D%E5%87%86%E5%A4%87"><span class="toc-text">赛前准备</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8E%8B%E6%B5%8B%E7%A8%8B%E5%BA%8F"><span class="toc-text">压测程序</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%86%85%E5%AD%98%E5%9C%BA%E6%99%AF%E4%B8%8B%E7%9A%84tests-and-results"><span class="toc-text">内存场景下的tests and results</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#%E7%BC%93%E5%AD%98%E5%8D%A0%E7%94%A8%E7%A9%BA%E9%97%B4"><span class="toc-text">缓存占用空间</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#memcahced"><span class="toc-text">memcahced</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#scylladb"><span class="toc-text">scylladb</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%9F%BA%E4%BA%8Essd%E7%9A%84%E6%B5%8B%E8%AF%95"><span class="toc-text">基于ssd的测试</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#memcached-exstore"><span class="toc-text">memcached exstore</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#1kv-%E5%B0%8F-value%E6%B5%8B%E8%AF%95"><span class="toc-text">1kv 小 value测试</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#8kb-%E5%A4%A7value"><span class="toc-text">8kb 大value</span></a></li></ol></li><li class="toc-item toc-level-5"><a class="toc-link" href="#scylladb-%E5%9B%9E%E5%88%B0%E4%B8%BB%E5%9C%BA"><span class="toc-text">scylladb 回到主场</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#1kb-%E5%B0%8Fvalue"><span class="toc-text">1kb 小value</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#8kb-%E6%B5%8B%E8%AF%95"><span class="toc-text">8kb 测试</span></a></li></ol></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#ssd-overwrite%E6%B5%8B%E8%AF%95"><span class="toc-text">ssd overwrite测试</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA"><span class="toc-text">结论</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%83%B3%E6%B3%95"><span class="toc-text">想法</span></a></li></ol></li></ol></li></ol>
+      
+    </div>
+  </div>
+
+  
+<script src="/js/catalog.js"></script>
+
+
+
+
+    
+      <div class="comments-container">
+        
+
+
+
+
+
+
+
+      </div>
+    
+  </div>
+
+
+        
+<div class="footer">
+  <div class="social">
+    <ul>
+      
+        <li>
+          
+              <a title="github" target="_blank" rel="noopener" href="https://github.com/zchengsite/hexo-theme-oranges">
+                <i class="iconfont icon-github"></i>
+              </a>
+              
+        </li>
+        
+    </ul>
+  </div>
+  
+    
+    <div class="footer-more">
+      
+        <a target="_blank" rel="noopener" href="https://github.com/zchengsite/hexo-theme-oranges">Copyright © 2024 Oranges</a>
+        
+    </div>
+  
+    
+    <div class="footer-more">
+      
+        <a target="_blank" rel="noopener" href="https://github.com/zchengsite/hexo-theme-oranges">Theme by Oranges | Powered by Hexo</a>
+        
+    </div>
+  
+  
+</div>
+
+      </div>
+
+      <div class="tools-bar">
+        <div class="back-to-top tools-bar-item hidden">
+  <a href="javascript: void(0)">
+    <i class="iconfont icon-chevronup"></i>
+  </a>
+</div>
+
+
+<script src="/js/backtotop.js"></script>
+
+
+
+        
+  <div class="search-icon tools-bar-item" id="search-icon">
+    <a href="javascript: void(0)">
+      <i class="iconfont icon-search"></i>
+    </a>
+  </div>
+
+  <div class="search-overlay hidden">
+    <div class="search-content" tabindex="0">
+      <div class="search-title">
+        <span class="search-icon-input">
+          <a href="javascript: void(0)">
+            <i class="iconfont icon-search"></i>
+          </a>
+        </span>
+        
+          <input type="text" class="search-input" id="search-input" placeholder="Search...">
+        
+        <span class="search-close-icon" id="search-close-icon">
+          <a href="javascript: void(0)">
+            <i class="iconfont icon-close"></i>
+          </a>
+        </span>
+      </div>
+      <div class="search-result" id="search-result"></div>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    var inputArea = document.querySelector("#search-input")
+    var searchOverlayArea = document.querySelector(".search-overlay")
+
+    inputArea.onclick = function() {
+      getSearchFile()
+      this.onclick = null
+    }
+
+    inputArea.onkeydown = function() {
+      if(event.keyCode == 13)
+        return false
+    }
+
+    function openOrHideSearchContent() {
+      let isHidden = searchOverlayArea.classList.contains('hidden')
+      if (isHidden) {
+        searchOverlayArea.classList.remove('hidden')
+        document.body.classList.add('hidden')
+        // inputArea.focus()
+      } else {
+        searchOverlayArea.classList.add('hidden')
+        document.body.classList.remove('hidden')
+      }
+    }
+
+    function blurSearchContent(e) {
+      if (e.target === searchOverlayArea) {
+        openOrHideSearchContent()
+      }
+    }
+
+    document.querySelector("#search-icon").addEventListener("click", openOrHideSearchContent, false)
+    document.querySelector("#search-close-icon").addEventListener("click", openOrHideSearchContent, false)
+    searchOverlayArea.addEventListener("click", blurSearchContent, false)
+
+    var searchFunc = function (path, search_id, content_id) {
+      'use strict';
+      var $input = document.getElementById(search_id);
+      var $resultContent = document.getElementById(content_id);
+      $resultContent.innerHTML = "<ul><span class='local-search-empty'>First search, index file loading, please wait...<span></ul>";
+      $.ajax({
+        // 0x01. load xml file
+        url: path,
+        dataType: "xml",
+        success: function (xmlResponse) {
+          // 0x02. parse xml file
+          var datas = $("entry", xmlResponse).map(function () {
+            return {
+              title: $("title", this).text(),
+              content: $("content", this).text(),
+              url: $("url", this).text()
+            };
+          }).get();
+          $resultContent.innerHTML = "";
+
+          $input.addEventListener('input', function () {
+            // 0x03. parse query to keywords list
+            var str = '<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length <= 0) {
+              return;
+            }
+            // 0x04. perform local searching
+            datas.forEach(function (data) {
+              var isMatch = true;
+              var content_index = [];
+              if (!data.title || data.title.trim() === '') {
+                data.title = "Untitled";
+              }
+              var orig_data_title = data.title.trim();
+              var data_title = orig_data_title.toLowerCase();
+              var orig_data_content = data.content.trim().replace(/<[^>]+>/g, "");
+              var data_content = orig_data_content.toLowerCase();
+              var data_url = data.url;
+              var index_title = -1;
+              var index_content = -1;
+              var first_occur = -1;
+              // only match artiles with not empty contents
+              if (data_content !== '') {
+                keywords.forEach(function (keyword, i) {
+                  index_title = data_title.indexOf(keyword);
+                  index_content = data_content.indexOf(keyword);
+
+                  if (index_title < 0 && index_content < 0) {
+                    isMatch = false;
+                  } else {
+                    if (index_content < 0) {
+                      index_content = 0;
+                    }
+                    if (i == 0) {
+                      first_occur = index_content;
+                    }
+                    // content_index.push({index_content:index_content, keyword_len:keyword_len});
+                  }
+                });
+              } else {
+                isMatch = false;
+              }
+              // 0x05. show search results
+              if (isMatch) {
+                str += "<li><a href='" + data_url + "' class='search-result-title'>" + orig_data_title + "</a>";
+                var content = orig_data_content;
+                if (first_occur >= 0) {
+                  // cut out 100 characters
+                  var start = first_occur - 20;
+                  var end = first_occur + 80;
+
+                  if (start < 0) {
+                    start = 0;
+                  }
+
+                  if (start == 0) {
+                    end = 100;
+                  }
+
+                  if (end > content.length) {
+                    end = content.length;
+                  }
+
+                  var match_content = content.substr(start, end);
+
+                  // highlight all keywords
+                  keywords.forEach(function (keyword) {
+                    var regS = new RegExp(keyword, "gi");
+                    match_content = match_content.replace(regS, "<span class=\"search-keyword\">" + keyword + "</span>");
+                  });
+
+                  str += "<p class=\"search-result-abstract\">" + match_content + "...</p>"
+                }
+                str += "</li>";
+              }
+            });
+            str += "</ul>";
+            if (str.indexOf('<li>') === -1) {
+              return $resultContent.innerHTML = "<ul><span class='local-search-empty'>No result<span></ul>";
+            }
+            $resultContent.innerHTML = str;
+          });
+        },
+        error: function(xhr, status, error) {
+          $resultContent.innerHTML = ""
+          if (xhr.status === 404) {
+            $resultContent.innerHTML = "<ul><span class='local-search-empty'>The search.xml file was not found, please refer to：<a href='https://github.com/zchengsite/hexo-theme-oranges#configuration' target='_black'>configuration</a><span></ul>";
+          } else {
+            $resultContent.innerHTML = "<ul><span class='local-search-empty'>The request failed, Try to refresh the page or try again later.<span></ul>";
+          }
+        }
+      });
+      $(document).on('click', '#search-close-icon', function() {
+        $('#search-input').val('');
+        $('#search-result').html('');
+      });
+    }
+
+    var getSearchFile = function() {
+        var path = "/search.xml";
+        searchFunc(path, 'search-input', 'search-result');
+    }
+  </script>
+
+
+
+
+        
+  <div class="tools-bar-item theme-icon" id="switch-color-scheme">
+    <a href="javascript: void(0)">
+      <i id="theme-icon" class="iconfont icon-moon"></i>
+    </a>
+  </div>
+
+  
+<script src="/js/colorscheme.js"></script>
+
+
+
+
+
+        
+  
+    <div class="share-icon tools-bar-item">
+      <a href="javascript: void(0)" id="share-icon">
+        <i class="iconfont iconshare"></i>
+      </a>
+      <div class="share-content hidden">
+        
+          <a class="share-item" href="https://twitter.com/intent/tweet?text=' + When%20SQL%20Databases%20Meet%20KV%20Databases%20(ScyllaDB%20vs%20Memcached) + '&url=' + http%3A%2F%2Fexample.com%2F2024%2F10%2F29%2FWhen-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached%2F + '" target="_blank" title="Twitter">
+            <i class="iconfont icon-twitter"></i>
+          </a>
+        
+        
+          <a class="share-item" href="https://www.facebook.com/sharer.php?u=http://example.com/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/" target="_blank" title="Facebook">
+            <i class="iconfont icon-facebooksquare"></i>
+          </a>
+        
+      </div>
+    </div>
+  
+  
+<script src="/js/shares.js"></script>
+
+
+
+      </div>
+    </div>
+  </body>
+</html>
