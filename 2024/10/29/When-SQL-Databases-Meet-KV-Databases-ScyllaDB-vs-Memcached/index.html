@@ -157,12 +157,12 @@
       <div class="post-attach">
         <span class="post-pubtime">
           <i class="iconfont icon-updatetime mr-10" title="Update time"></i>
-          2024-10-29 03:39:35
+          2024-10-29 03:55:29
         </span>
         
       </div>
       <div class="markdown-body">
-        <h1 id="当sql数据库遇见kv数据库-scylladb-vs-memcached"><a href="#当sql数据库遇见kv数据库-scylladb-vs-memcached" class="headerlink" title="当sql数据库遇见kv数据库(scylladb vs memcached)"></a>当sql数据库遇见kv数据库(scylladb vs memcached)</h1><p>​<img src="/assets/1200x628-scylladb-vs-memached-1100x576-20241022212408-7ag8k9p.png">​</p>
+        <h1 id="当sql数据库遇见kv数据库-scylladb-vs-memcached"><a href="#当sql数据库遇见kv数据库-scylladb-vs-memcached" class="headerlink" title="当sql数据库遇见kv数据库(scylladb vs memcached)"></a>当sql数据库遇见kv数据库(scylladb vs memcached)</h1><p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/1200x628-scylladb-vs-memached-1100x576-20241022212408-7ag8k9p.png">​</p>
 <ul>
 <li>We Compared ScyllaDB and Memcached and… We Lost? - ScyllaDB - ScyllaDB</li>
 <li><a target="_blank" rel="noopener" href="https://www.scylladb.com/2024/10/08/scylladb-and-memcached/">https://www.scylladb.com/2024/10/08/scylladb-and-memcached/</a></li>
@@ -254,12 +254,12 @@
 <li><strong>压缩空闲目录</strong> ： 存储系统具有较强的局部性(怎么证明这个？局部性）。这点对于元数据来说也是成立的。Juicefs 将 不活跃的目录元数据进行压缩。将一个目录和它的目录项紧凑序列化到一段连续的内存缓冲区，然后压缩。大概省了三分之二的内存。压缩的trade off是cpu时间，和有可能的延迟长尾。（这个优化确实很有意思）</li>
 <li>还有一个小文件元数据紧凑格式，更多指的是大小方面的元数据(chunk,slice)。类似union 特判一下，略过。</li>
 </ol>
-<p>​<img src="/assets/image-20241023214703-moakykj.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023214703-moakykj.png" alt="image">​</p>
 <p>效果还是非常可观的，值得学习。</p>
 <h5 id="memcahced"><a href="#memcahced" class="headerlink" title="memcahced"></a>memcahced</h5><p>memcached 存储了101M个key,value对，也就是一亿个。</p>
 <p>两者都是LRU。压测读30分钟。</p>
 <p>memcahced pipeline 16 items, 3M qps也就是3000k qps，网络带宽打满了。hit ratio 100%。这个时候cpu好像没满，空闲了一些（短板问题）。</p>
-<p>​<img src="/assets/image-20241023222441-bzagtld.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023222441-bzagtld.png" alt="image">​</p>
 <p>延迟信息</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">--- subtest basic ---</span><br><span class="line"><span class="built_in">stat</span>: cmd_get :</span><br><span class="line"> Total Ops: 5503513496</span><br><span class="line"> Rate: 3060908/s</span><br><span class="line">=== timer mg ===</span><br><span class="line">1-10us    0    0.000%</span><br><span class="line">10-99us    343504394    6.238%</span><br><span class="line">100-999us    5163057634    93.762%</span><br><span class="line">1-2ms    11500    0.00021%</span><br><span class="line">2-3ms    144    0.00000%</span><br><span class="line">3-4ms    336    0.00001%</span><br><span class="line">4-5ms    400    0.00001%</span><br><span class="line">11-12ms    32    0.00000%</span><br></pre></td></tr></table></figure>
 
@@ -270,9 +270,9 @@
 <p>之后优化后，总共弄了80M 的缓存item。</p>
 <p> a total of 187K read ops&#x2F;second over 30 minutes，但是每个操作都会得到16 rows，所以结果需要* 16, 也就是2,992k qps（really?真这么快？）。两者都是单机shared-nothing，拼的可能是内存索引快不快吧。</p>
 <p>服务端p99，500us 对于纯内存感觉还不是极限？不过它没有分析。</p>
-<p>​<img src="/assets/image-20241027195553-7xp0n8l.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241027195553-7xp0n8l.png" alt="image">​</p>
 <p>scylladb 也打满了网络带宽，客户端方面的p99，感觉“毛刺” 比较严重？应该是网络问题。</p>
-<p>​<img src="/assets/image-20241023223439-svaynb2.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023223439-svaynb2.png" alt="image">​</p>
 <h4 id="基于ssd的测试"><a href="#基于ssd的测试" class="headerlink" title="基于ssd的测试"></a>基于ssd的测试</h4><p>首先表达了，这个测试比较难做，因为没有合适的，没有理想的工作负载。就像之前redis 和 cloudflare的不同决策，一个乐观，一个悲观，两者都真实存在，一个需要内存性能，一个需要ssd性能。</p>
 <p>所以测试团队决定，两种都测，也就是大部分hit mem还是大部分hit ssd。</p>
 <p>基于xfs，fio测试下，randread， 340k iops，还不错。</p>
@@ -286,47 +286,47 @@
 </blockquote>
 <p>知识点太多了。。。</p>
 <p>io调度器性能（<a target="_blank" rel="noopener" href="https://www.phoronix.com/review/linux-56-nvme/2">Linux 5.6 I&#x2F;O Scheduler Benchmarks: None, Kyber, BFQ, MQ-Deadline - Phoronix</a>)</p>
-<p>​<img src="/assets/image-20241027202223-2eejzeq.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241027202223-2eejzeq.png" alt="image">​</p>
 <p>（话说我电脑上的是哪个？）</p>
 <h6 id="1kv-小-value测试"><a href="#1kv-小-value测试" class="headerlink" title="1kv 小 value测试"></a>1kv 小 value测试</h6><p>存储了700M个item，用了大概52gb ram。</p>
 <p>32个i&#x2F;o线程打不满磁盘带宽（用iotop看的），850mb&#x2F;s , 调到64个，1200mb&#x2F;s.</p>
-<p>​<img src="/assets/image-20241023225029-t4y12sh.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023225029-t4y12sh.png" alt="image">​</p>
 <p>qps和latency不可兼得，至少在这个case下，我觉得我愿意64线程。</p>
 <h6 id="8kb-大value"><a href="#8kb-大value" class="headerlink" title="8kb 大value"></a>8kb 大value</h6><p>将value扩大到8kb value，再测一遍。这个case下，ssd的支持就是必要的，用内存成本确实顶不住。但这么大value的场景其实不太多。16个线程1025mb&#x2F;s , 32个线程 1100mb&#x2F;s，32有点没必要。</p>
-<p>​<img src="/assets/image-20241023225232-a0dcq6r.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023225232-a0dcq6r.png" alt="image">​</p>
 <p>不开启pipeline的话，延迟会好非常多。开启之后，因为batching，i&#x2F;o队列要大一些，所以latency也就上来了。</p>
 <h5 id="scylladb-回到主场"><a href="#scylladb-回到主场" class="headerlink" title="scylladb 回到主场"></a>scylladb 回到主场</h5><p>scylladb 自己是一个针对存储高度优化的数据库，有自己的i&#x2F;o 调度器，有自己的“page cache”，i&#x2F;o也是异步的。有可能的话，出一篇i&#x2F;o调度器的调研。</p>
 <p>seastar首先会使用一个iotune来测试磁盘，记录带宽和iops，辅助i&#x2F;o调度器的决策。如下</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">disks:</span><br><span class="line">  - mountpoint: /var/lib/scylla</span><br><span class="line">	read_iops: 313289</span><br><span class="line">	read_bandwidth: 3116245504</span><br><span class="line">	write_iops: 91691</span><br><span class="line">	write_bandwidth: 2287052288</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">disks:</span><br><span class="line">  - mountpoint: /var/lib/scylla</span><br><span class="line">    read_iops: 313289</span><br><span class="line">    read_bandwidth: 3116245504</span><br><span class="line">    write_iops: 91691</span><br><span class="line">    write_bandwidth: 2287052288</span><br></pre></td></tr></table></figure>
 
 <p>读路径是传统LSM读路径。</p>
 <p>又介绍了一些它自己的优化，有点晕，略过，不是很熟oltp和lsm。</p>
 <h6 id="1kb-小value"><a href="#1kb-小value" class="headerlink" title="1kb 小value"></a>1kb 小value</h6><p>填充料700M 个item，1kb 测试结果如下</p>
-<p>​<img src="/assets/image-20241023230025-6vrjc64.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023230025-6vrjc64.png" alt="image">​</p>
 <p>这里的shard指的是一个cpu core，也就是说一个core可以轻松来到19k qps，99 latency 在2ms左右。</p>
 <p>scylladb 的 ssd带宽更低，但也接近磁盘的最大随机读iops。</p>
-<p>​<img src="/assets/image-20241023230151-0oh089f.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023230151-0oh089f.png" alt="image">​</p>
 <p>这里实际在说的是“读放大更小？“</p>
 <blockquote>
 <p>thanks to its AIO&#x2F;DIO implementation</p>
 </blockquote>
 <p>seastar其实是支持io_uring的，但我感觉支持的比较奇怪，之前我自己测的时候效果也一般。不知道具体原因。</p>
-<p>​<img src="/assets/image-20241023230151-0oh089f.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023230151-0oh089f.png" alt="image">​</p>
 <p>客户端的268k qps和p99 2.4ms，都优于memcached exstore。</p>
-<p>​<img src="/assets/image-20241023230456-t7g9za2.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023230456-t7g9za2.png" alt="image">​</p>
 <h6 id="8kb-测试"><a href="#8kb-测试" class="headerlink" title="8kb 测试"></a>8kb 测试</h6><p>切成leveled compaction，关闭sstable compression。</p>
 <p>160k qps, p99 2ms，至少数据上看，也是全面优于memcached.</p>
-<p>​<img src="/assets/image-20241023230825-b5peu9k.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023230825-b5peu9k.png" alt="image">​</p>
 <p>有一篇paper其实研究过i&#x2F;o调度策略对性能影响的，kernel其实也支持几个io调度器，之后会归到io_uring那篇文章。</p>
 <p>这个client side的P99，看的身心愉悦。</p>
-<p>​<img src="/assets/image-20241023231020-0c8hilf.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023231020-0c8hilf.png" alt="image">​</p>
 <p>实际的磁盘带宽和iops和memcached差不多，starvation time在增加，表明ssd调度不过来了。i&#x2F;o调度真有这么神奇？有时间研究看看。带宽来到 1.3 gb&#x2F;s，比memcahced要高一些。</p>
-<p>​<img src="/assets/image-20241023231347-hl538q1.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241023231347-hl538q1.png" alt="image">​</p>
 <h4 id="ssd-overwrite测试"><a href="#ssd-overwrite测试" class="headerlink" title="ssd overwrite测试"></a>ssd overwrite测试</h4><p>在之前的测视力加入10%的随机overwrite。‘</p>
 <p>memcached</p>
-<p>​<img src="/assets/image-20241027203700-w9lnplt.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241027203700-w9lnplt.png" alt="image">​</p>
 <p>scylladb，两个合起来看。读的延迟偏高。</p>
-<p>​<img src="/assets/image-20241027203739-bvlaazn.png" alt="image">​</p>
+<p>​<img src="/2024/10/29/When-SQL-Databases-Meet-KV-Databases-ScyllaDB-vs-Memcached/assets/image-20241027203739-bvlaazn.png" alt="image">​</p>
 <h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>其实看下来两者性能并没有显著的差异。选择哪一个，取决于</p>
 <ol>
 <li><p>用户更喜欢kv还是sql。</p>
@@ -364,7 +364,7 @@
           <div class="post-attach">
             <span class="post-pubtime">
               <i class="iconfont icon-updatetime mr-10" title="Update time"></i>
-              2024-10-29 03:39:35
+              2024-10-29 03:55:29
             </span>
             
           </div>
